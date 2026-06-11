@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrackConnect — Sign In</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .auth-tabs { display: flex; gap: 0; margin-bottom: 28px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border-glass); }
+    .auth-tab  { flex: 1; padding: 10px; background: none; border: none; color: var(--text-secondary); font-size: 14px; font-weight: 600; cursor: pointer; transition: var(--transition); }
+    .auth-tab.active { background: var(--cyan-dim); color: var(--cyan); }
+    .input-icon-wrap { position: relative; }
+    .input-icon-wrap .form-control { padding-left: 42px; }
+    .input-icon-wrap .icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 16px; color: var(--text-muted); pointer-events: none; }
+    .pass-toggle { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; }
+    .error-msg { color: var(--red); font-size: 13px; margin-top: 6px; display: none; }
+    .error-msg.show { display: block; }
+  </style>
+</head>
+<body class="auth-page">
+  <div id="toast-container"></div>
+
+  <div class="auth-card fade-in">
+    <div class="auth-logo">
+      <div class="logo-mark">📡</div>
+      <h1>TrackConnect</h1>
+      <p>Real-time location sharing with trusted contacts</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Sign In</button>
+      <button class="auth-tab" id="tab-register" onclick="switchTab('register')">Create Account</button>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <form id="login-form" autocomplete="off">
+      <div class="form-group">
+        <label class="form-label">Email or Phone Number</label>
+        <div class="input-icon-wrap">
+          <span class="icon">👤</span>
+          <input class="form-control" type="text" id="login-identifier" placeholder="you@email.com or +91..." autocomplete="username">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <div class="input-icon-wrap">
+          <span class="icon">🔒</span>
+          <input class="form-control" type="password" id="login-password" placeholder="Your password" autocomplete="current-password">
+          <button type="button" class="pass-toggle" onclick="togglePass('login-password', this)">👁️</button>
+        </div>
+      </div>
+      <p class="error-msg" id="login-error"></p>
+      <button type="submit" class="btn btn-primary w-full" id="btn-login">
+        <span id="btn-login-text">Sign In</span>
+        <span id="btn-login-spinner" class="spinner hidden"></span>
+      </button>
+    </form>
+
+    <!-- REGISTER FORM -->
+    <form id="register-form" class="hidden" autocomplete="off">
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <div class="input-icon-wrap">
+          <span class="icon">✏️</span>
+          <input class="form-control" type="text" id="reg-name" placeholder="Jane Doe">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <div class="input-icon-wrap">
+          <span class="icon">📧</span>
+          <input class="form-control" type="email" id="reg-email" placeholder="jane@example.com">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone Number</label>
+        <div class="input-icon-wrap">
+          <span class="icon">📱</span>
+          <input class="form-control" type="tel" id="reg-phone" placeholder="+91 98765 43210">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <div class="input-icon-wrap">
+          <span class="icon">🔒</span>
+          <input class="form-control" type="password" id="reg-password" placeholder="Min 6 characters" autocomplete="new-password">
+          <button type="button" class="pass-toggle" onclick="togglePass('reg-password', this)">👁️</button>
+        </div>
+      </div>
+      <p class="error-msg" id="register-error"></p>
+      <button type="submit" class="btn btn-primary w-full" id="btn-register">
+        <span id="btn-register-text">Create Account</span>
+        <span id="btn-register-spinner" class="spinner hidden"></span>
+      </button>
+    </form>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script>
+    // Redirect if already logged in
+    Auth.requireGuest();
+
+    function switchTab(tab) {
+      const isLogin = tab === 'login';
+      document.getElementById('tab-login').classList.toggle('active', isLogin);
+      document.getElementById('tab-register').classList.toggle('active', !isLogin);
+      document.getElementById('login-form').classList.toggle('hidden', !isLogin);
+      document.getElementById('register-form').classList.toggle('hidden', isLogin);
+      document.getElementById('login-error').classList.remove('show');
+      document.getElementById('register-error').classList.remove('show');
+    }
+
+    function togglePass(fieldId, btn) {
+      const field = document.getElementById(fieldId);
+      const isPass = field.type === 'password';
+      field.type = isPass ? 'text' : 'password';
+      btn.textContent = isPass ? '🙈' : '👁️';
+    }
+
+    function setLoading(prefix, loading) {
+      document.getElementById(`btn-${prefix}-text`).classList.toggle('hidden', loading);
+      document.getElementById(`btn-${prefix}-spinner`).classList.toggle('hidden', !loading);
+      document.getElementById(`btn-${prefix}`).disabled = loading;
+    }
+
+    function showError(formId, msg) {
+      const el = document.getElementById(`${formId}-error`);
+      el.textContent = msg;
+      el.classList.add('show');
+    }
+
+    // LOGIN
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      document.getElementById('login-error').classList.remove('show');
+      const identifier = document.getElementById('login-identifier').value.trim();
+      const password   = document.getElementById('login-password').value;
+
+      if (!identifier || !password) { showError('login', 'Please fill in all fields.'); return; }
+
+      setLoading('login', true);
+      const res = await apiFetch('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ identifier, password }),
+      });
+      setLoading('login', false);
+
+      if (res && res.ok) {
+        Auth.setToken(res.data.token);
+        Auth.setUser(res.data.user);
+        Toast.success('Welcome back!', `Signed in as ${res.data.user.name}`);
+        setTimeout(() => { window.location.href = 'dashboard.html'; }, 500);
+      } else {
+        showError('login', res?.data?.message || 'Login failed.');
+      }
+    });
+
+    // REGISTER
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      document.getElementById('register-error').classList.remove('show');
+      const name     = document.getElementById('reg-name').value.trim();
+      const email    = document.getElementById('reg-email').value.trim();
+      const phone    = document.getElementById('reg-phone').value.trim();
+      const password = document.getElementById('reg-password').value;
+
+      if (!name || !email || !phone || !password) { showError('register', 'Please fill in all fields.'); return; }
+      if (password.length < 6) { showError('register', 'Password must be at least 6 characters.'); return; }
+
+      setLoading('register', true);
+      const res = await apiFetch('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ name, email, phone, password }),
+      });
+      setLoading('register', false);
+
+      if (res && res.ok) {
+        Auth.setToken(res.data.token);
+        Auth.setUser(res.data.user);
+        Toast.success('Account created!', 'Welcome to TrackConnect.');
+        setTimeout(() => { window.location.href = 'dashboard.html'; }, 500);
+      } else {
+        const msg = res?.data?.errors?.[0]?.msg || res?.data?.message || 'Registration failed.';
+        showError('register', msg);
+      }
+    });
+  </script>
+</body>
+</html>

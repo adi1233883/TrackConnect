@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrackConnect — Requests</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .req-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 36px; color: var(--text-secondary); text-align: center; }
+    .req-empty .empty-icon { font-size: 40px; }
+    .req-empty p { font-size: 14px; }
+  </style>
+</head>
+<body>
+<div id="toast-container"></div>
+<div class="app-layout">
+  <div id="sidebar-mount"></div>
+  <main class="main-content">
+
+    <div class="page-header fade-in">
+      <h1>📨 Requests</h1>
+      <p>Manage incoming and outgoing tracking requests</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs fade-in">
+      <button class="tab-btn active" id="tab-in" onclick="switchTab('incoming')">
+        Incoming <span id="in-count-badge" class="nav-badge hidden" style="margin-left:6px;"></span>
+      </button>
+      <button class="tab-btn" id="tab-out" onclick="switchTab('outgoing')">Outgoing</button>
+    </div>
+
+    <!-- Incoming -->
+    <div id="panel-incoming" class="glass-card fade-in">
+      <div class="loading-overlay"><div class="spinner"></div><span>Loading…</span></div>
+    </div>
+
+    <!-- Outgoing -->
+    <div id="panel-outgoing" class="glass-card fade-in hidden">
+      <div class="loading-overlay"><div class="spinner"></div><span>Loading…</span></div>
+    </div>
+
+  </main>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/sidebar.js"></script>
+<script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+<script src="js/socket.js"></script>
+<script>
+  Auth.requireAuth();
+  injectSidebar();
+  initSidebar('requests');
+
+  function switchTab(tab) {
+    const isIn = tab === 'incoming';
+    document.getElementById('tab-in').classList.toggle('active', isIn);
+    document.getElementById('tab-out').classList.toggle('active', !isIn);
+    document.getElementById('panel-incoming').classList.toggle('hidden', !isIn);
+    document.getElementById('panel-outgoing').classList.toggle('hidden', isIn);
+  }
+
+  async function loadIncoming() {
+    const res = await apiFetch('/requests/incoming');
+    const panel = document.getElementById('panel-incoming');
+    const badge = document.getElementById('in-count-badge');
+    const sbBadge = document.getElementById('requests-badge');
+
+    if (!res?.ok) { panel.innerHTML = '<p class="text-muted" style="padding:16px">Failed to load.</p>'; return; }
+
+    const requests = res.data.requests;
+    const count = requests.length;
+
+    if (count > 0) {
+      badge.textContent = count;
+      badge.classList.remove('hidden');
+      if (sbBadge) { sbBadge.textContent = count; sbBadge.classList.remove('hidden'); }
+    } else {
+      badge.classList.add('hidden');
+      if (sbBadge) sbBadge.classList.add('hidden');
+    }
+
+    if (requests.length === 0) {
+      panel.innerHTML = `<div class="req-empty"><div class="empty-icon">📭</div><p>No incoming requests right now.</p></div>`;
+      return;
+    }
+
+    panel.innerHTML = `<div class="item-list">
+      ${requests.map(r => `
+        <div class="item-card fade-in" id="req-${r.id}">
+          <div class="avatar">
+            ${r.sender_image
+              ? `<img src="http://const API_BASE = "https://himself-finder-pace-placed.trycloudflare.com/api";"https://willow-sets-valium-subsequently.trycloudflare.com/api";${r.sender_image}" alt="${r.sender_name}">`
+              : `<span>${r.sender_name.charAt(0).toUpperCase()}</span>`}
+          </div>
+          <div class="item-info">
+            <div class="item-name">${r.sender_name}</div>
+            <div class="item-sub">${r.sender_phone} · ${timeAgo(r.created_at)}</div>
+          </div>
+          <div class="item-actions">
+            <button class="btn btn-sm btn-success" onclick="handleRequest(${r.id}, 'accept', '${r.sender_name}')">✔ Accept</button>
+            <button class="btn btn-sm btn-danger"  onclick="handleRequest(${r.id}, 'reject', '${r.sender_name}')">✕ Reject</button>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  async function loadOutgoing() {
+    const res = await apiFetch('/requests/outgoing');
+    const panel = document.getElementById('panel-outgoing');
+
+    if (!res?.ok) { panel.innerHTML = '<p class="text-muted" style="padding:16px">Failed to load.</p>'; return; }
+
+    const requests = res.data.requests;
+
+    if (requests.length === 0) {
+      panel.innerHTML = `<div class="req-empty"><div class="empty-icon">📤</div><p>You haven't sent any requests yet.</p></div>`;
+      return;
+    }
+
+    panel.innerHTML = `<div class="item-list">
+      ${requests.map(r => `
+        <div class="item-card fade-in">
+          <div class="avatar">
+            ${r.receiver_image
+              ? `<img src="http://const API_BASE = "https://himself-finder-pace-placed.trycloudflare.com/api";"https://willow-sets-valium-subsequently.trycloudflare.com/api";${r.receiver_image}" alt="${r.receiver_name}">`
+              : `<span>${r.receiver_name.charAt(0).toUpperCase()}</span>`}
+          </div>
+          <div class="item-info">
+            <div class="item-name">${r.receiver_name}</div>
+            <div class="item-sub">${r.receiver_phone} · Sent ${timeAgo(r.created_at)}</div>
+          </div>
+          <div class="item-actions">
+            <span class="badge badge-${r.status}">${statusLabel(r.status)}</span>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  function statusLabel(s) {
+    return s === 'pending' ? '⏳ Pending' : s === 'accepted' ? '✅ Accepted' : '❌ Rejected';
+  }
+
+  async function handleRequest(id, action, name) {
+    const btn = event.target;
+    btn.disabled = true;
+    const res = await apiFetch(`/requests/${action}/${id}`, { method: 'POST' });
+
+    if (res?.ok) {
+      const row = document.getElementById(`req-${id}`);
+      if (row) {
+        row.style.animation = 'fadeOut 0.3s ease forwards';
+        setTimeout(() => row.remove(), 300);
+      }
+      if (action === 'accept') {
+        Toast.success('Accepted!', `You are now connected with ${name}.`);
+      } else {
+        Toast.info('Rejected', `Request from ${name} was rejected.`);
+      }
+      loadIncoming();
+    } else {
+      Toast.error('Error', res?.data?.message || 'Action failed.');
+      btn.disabled = false;
+    }
+  }
+
+  // Socket live updates
+  const socket = SocketClient.connect();
+  if (socket) {
+    socket.on('new_request', (data) => {
+      Toast.info('New request', `${data.from.name} wants to track you.`);
+      loadIncoming();
+    });
+    socket.on('request_accepted', () => loadOutgoing());
+    socket.on('request_rejected', () => loadOutgoing());
+  }
+
+  loadIncoming();
+  loadOutgoing();
+</script>
+</body>
+</html>

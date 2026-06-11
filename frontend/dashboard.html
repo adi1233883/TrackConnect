@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrackConnect — Dashboard</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .welcome-banner {
+      background: linear-gradient(135deg, rgba(0,224,255,0.1), rgba(124,92,252,0.1));
+      border: 1px solid var(--border-accent);
+      border-radius: var(--radius-lg);
+      padding: 28px 32px;
+      margin-bottom: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .welcome-banner h2 { font-family: var(--font-display); font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+    .welcome-banner p  { color: var(--text-secondary); font-size: 14px; }
+    .welcome-emoji     { font-size: 48px; flex-shrink: 0; }
+    .activity-list     { display: flex; flex-direction: column; gap: 10px; }
+    .activity-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px;
+      background: var(--bg-glass-light);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-glass);
+      font-size: 14px;
+    }
+    .activity-dot {
+      width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    }
+    .dot-cyan   { background: var(--cyan); }
+    .dot-violet { background: var(--violet); }
+    .dot-green  { background: var(--green); }
+    .dot-red    { background: var(--red); }
+    .activity-time { margin-left: auto; color: var(--text-muted); font-size: 12px; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 900px) { .two-col { grid-template-columns: 1fr; } }
+    .section-title { font-family: var(--font-display); font-size: 16px; font-weight: 600; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    .loc-status { display: flex; align-items: center; gap: 10px; padding: 14px 16px; background: var(--bg-glass-light); border-radius: var(--radius-sm); border: 1px solid var(--border-glass); margin-bottom: 10px; font-size: 14px; }
+    .loc-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--text-muted); flex-shrink: 0; }
+    .loc-dot.active { background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 2s ease infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    
+    /* Added to support broken HTML styles gracefully */
+    .item-list { display: flex; flex-direction: column; gap: 12px; }
+    .item-card { display: flex; align-items: center; gap: 16px; padding: 12px; background: var(--bg-glass-light); border: 1px solid var(--border-glass); border-radius: var(--radius-md); }
+    .avatar { width: 40px; height: 40px; border-radius: 50%; overflow: hidden; background: var(--border-accent); display: flex; align-items: center; justify-content: center; font-weight: bold; }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .item-info { flex-grow: 1; }
+    .item-name { font-weight: 600; font-size: 14px; }
+    .item-sub { font-size: 12px; color: var(--text-secondary); }
+    .badge-online { background: rgba(0, 200, 0, 0.1); color: var(--green); padding: 4px 8px; border-radius: 12px; font-size: 12px; }
+  </style>
+</head>
+<body>
+<div id="toast-container"></div>
+<div class="app-layout">
+  <div id="sidebar-mount"></div>
+  <main class="main-content">
+
+    <div class="welcome-banner fade-in">
+      <div>
+        <h2>Hello, <span id="dash-name">…</span> 👋</h2>
+        <p>Here's what's happening with your location network today.</p>
+      </div>
+      <div class="welcome-emoji">📡</div>
+    </div>
+
+    <div class="stats-grid fade-in">
+      <div class="stat-card">
+        <div class="stat-icon">👥</div>
+        <div class="stat-value" id="stat-contacts">—</div>
+        <div class="stat-label">Contacts</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📨</div>
+        <div class="stat-value" id="stat-incoming">—</div>
+        <div class="stat-label">Pending Requests</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📤</div>
+        <div class="stat-value" id="stat-outgoing">—</div>
+        <div class="stat-label">Sent Requests</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon">📍</div>
+        <div class="stat-value" id="stat-online">—</div>
+        <div class="stat-label">Contacts Online</div>
+      </div>
+    </div>
+
+    <div class="two-col fade-in">
+      <div class="glass-card">
+        <div class="section-title">📍 My Location Sharing</div>
+        <div class="loc-status">
+          <div class="loc-dot" id="loc-dot"></div>
+          <span id="loc-status-text">Location sharing off</span>
+        </div>
+        <p class="text-muted mb-4" id="loc-coords">Grant browser permission to start sharing your location with contacts.</p>
+        <button class="btn btn-primary" id="btn-share-loc">Start Sharing</button>
+        <button class="btn btn-danger hidden" id="btn-stop-loc">Stop Sharing</button>
+      </div>
+
+      <div class="glass-card">
+        <div class="section-title">⚡ Quick Actions</div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <a href="contacts.html" class="btn btn-secondary">👥 Add Contact by Phone</a>
+          <a href="requests.html" class="btn btn-secondary">📨 View Incoming Requests</a>
+          <a href="tracking.html" class="btn btn-secondary">🗺️ Open Live Map</a>
+          <a href="profile.html"  class="btn btn-secondary">⚙️ Edit Profile</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="glass-card mt-6 fade-in">
+      <div class="section-title">🟢 Contacts Online</div>
+      <div id="online-contacts-list">
+        <div class="loading-overlay"><div class="spinner"></div><span>Loading contacts…</span></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/sidebar.js"></script>
+<script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+<script src="js/socket.js"></script>
+<script>
+  Auth.requireAuth();
+  injectSidebar();
+  initSidebar('dashboard');
+
+  const user = Auth.getUser();
+  document.getElementById('dash-name').textContent = user?.name?.split(' ')[0] || 'there';
+
+  let watchId = null;
+  let sharingActive = false;
+
+  async function loadDashboard() {
+    const [contactsRes, incomingRes, outgoingRes] = await Promise.all([
+      apiFetch('/contacts'),
+      apiFetch('/requests/incoming'),
+      apiFetch('/requests/outgoing'),
+    ]);
+
+    if (contactsRes?.ok) {
+      const contacts = contactsRes.data.contacts;
+      document.getElementById('stat-contacts').textContent = contacts.length;
+
+      const onlineContacts = contacts.filter(c => c.is_online);
+      document.getElementById('stat-online').textContent = onlineContacts.length;
+
+      renderOnlineContacts(contacts);
+    }
+
+    if (incomingRes?.ok) {
+      document.getElementById('stat-incoming').textContent = incomingRes.data.requests.length;
+      const badge = document.getElementById('requests-badge');
+      if (badge && incomingRes.data.requests.length > 0) {
+        badge.textContent = incomingRes.data.requests.length;
+        badge.classList.remove('hidden');
+      }
+    }
+
+    if (outgoingRes?.ok) {
+      document.getElementById('stat-outgoing').textContent = outgoingRes.data.requests.length;
+    }
+  }
+
+  function renderOnlineContacts(contacts) {
+    const el = document.getElementById('online-contacts-list');
+    const online = contacts.filter(c => c.is_online);
+
+    if (online.length === 0) {
+      el.innerHTML = `<div class="empty-state"><div class="empty-icon">🌙</div><h3>No one online</h3><p>Your contacts will appear here when they're active.</p></div>`;
+      return;
+    }
+
+    el.innerHTML = `
+      <div class="item-list">
+        ${online.map(c => `
+          <div class="item-card">
+            <div class="avatar">
+              ${c.profile_image
+                ? `<img src="${API_BASE.replace('/api','')}${c.profile_image}" alt="${c.name}">>`
+                : `<span>${c.name.charAt(0).toUpperCase()}</span>`
+              }
+            </div>
+
+            <div class="item-info">
+              <div class="item-name">${c.name}</div>
+              <div class="item-sub">${c.phone}</div>
+            </div>
+
+            <span class="badge badge-online">🟢 Online</span>
+
+            <a href="tracking.html?track=${c.contact_id}" class="btn btn-sm btn-secondary">
+              Track
+            </a>
+          </div>
+        `).join('')}
+      </div>`;
+  }
+
+  // Location sharing
+  document.getElementById('btn-share-loc').addEventListener('click', startSharing);
+  document.getElementById('btn-stop-loc').addEventListener('click', stopSharing);
+
+  function startSharing() {
+    if (!navigator.geolocation) {
+      Toast.error('Not supported', 'Your browser does not support geolocation.');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      () => {
+        sharingActive = true;
+        watchId = navigator.geolocation.watchPosition(onPosition, onGeoError, {
+          enableHighAccuracy: true, maximumAge: 5000, timeout: 10000,
+        });
+        document.getElementById('btn-share-loc').classList.add('hidden');
+        document.getElementById('btn-stop-loc').classList.remove('hidden');
+        document.getElementById('loc-dot').classList.add('active');
+        document.getElementById('loc-status-text').textContent = 'Sharing live location';
+        Toast.success('Location sharing on', 'Your contacts can now see your location.');
+      },
+      onGeoError,
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
+
+  function stopSharing() {
+    if (watchId !== null) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+    sharingActive = false;
+    document.getElementById('btn-share-loc').classList.remove('hidden');
+    document.getElementById('btn-stop-loc').classList.add('hidden');
+    document.getElementById('loc-dot').classList.remove('active');
+    document.getElementById('loc-status-text').textContent = 'Location sharing off';
+    document.getElementById('loc-coords').textContent = 'Grant browser permission to start sharing your location with contacts.';
+    Toast.info('Location sharing off', 'You are no longer sharing your location.');
+  }
+
+  let lastSend = 0;
+  async function onPosition(pos) {
+    const { latitude, longitude, accuracy } = pos.coords;
+    document.getElementById('loc-coords').textContent = `📍 ${latitude.toFixed(5)}, ${longitude.toFixed(5)} (±${Math.round(accuracy)}m)`;
+
+    const now = Date.now();
+    if (now - lastSend >= 5000) {
+      lastSend = now;
+      await apiFetch('/location/update', {
+        method: 'POST',
+        body: JSON.stringify({ latitude, longitude, accuracy }),
+      });
+      // Also emit via socket
+      SocketClient.emit('location_update', { latitude, longitude, accuracy });
+    }
+  }
+
+  function onGeoError(err) {
+    Toast.error('Location error', err.message || 'Could not get location.');
+  }
+
+  // Socket events
+  const socket = SocketClient.connect();
+  if (socket) {
+    socket.on('new_request', (data) => {
+      Toast.info('New request', `${data.from.name} wants to track your location.`);
+      loadDashboard();
+    });
+    socket.on('request_accepted', (data) => {
+      Toast.success('Request accepted', `${data.by.name} accepted your request.`);
+      loadDashboard();
+    });
+    socket.on('request_rejected', (data) => {
+      Toast.warning('Request rejected', `${data.by.name} rejected your request.`);
+    });
+  }
+
+  loadDashboard();
+</script>
+</body>
+</html>

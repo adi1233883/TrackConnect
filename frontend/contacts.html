@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrackConnect — Contacts</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .add-contact-box {
+      background: linear-gradient(135deg, rgba(0,224,255,0.06), rgba(124,92,252,0.06));
+      border: 1px solid var(--border-accent);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .add-contact-box h3 { font-family: var(--font-display); font-size: 16px; margin-bottom: 4px; }
+    .add-contact-box p  { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; }
+    .phone-row { display: flex; gap: 10px; }
+    .phone-row .form-control { flex: 1; }
+    .contact-count { font-size: 13px; color: var(--text-secondary); margin-bottom: 14px; }
+    .search-bar { position: relative; margin-bottom: 16px; }
+    .search-bar input { padding-left: 40px; }
+    .search-bar .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--text-muted); }
+  </style>
+</head>
+<body>
+<div id="toast-container"></div>
+<div class="app-layout">
+  <div id="sidebar-mount"></div>
+  <main class="main-content">
+
+    <div class="page-header fade-in">
+      <h1>👥 Contacts</h1>
+      <p>Manage your trusted tracking contacts</p>
+    </div>
+
+    <!-- Add contact -->
+    <div class="add-contact-box fade-in">
+      <h3>Add Contact by Phone Number</h3>
+      <p>Enter someone's phone number to send them a tracking request. They must be registered on TrackConnect.</p>
+      <div class="phone-row">
+        <input class="form-control" type="tel" id="phone-input" placeholder="+91 98765 43210" maxlength="20">
+        <button class="btn btn-primary" id="btn-send-request">
+          <span id="send-text">Send Request</span>
+          <span class="spinner hidden" id="send-spinner"></span>
+        </button>
+      </div>
+      <p id="phone-feedback" style="margin-top:10px;font-size:13px;"></p>
+    </div>
+
+    <!-- Contact list -->
+    <div class="glass-card fade-in">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="section-title" style="margin-bottom:0">My Contacts</h2>
+        <span class="contact-count" id="contact-count"></span>
+      </div>
+
+      <div class="search-bar">
+        <span class="search-icon">🔍</span>
+        <input class="form-control" type="text" id="search-contacts" placeholder="Search by name or phone…">
+      </div>
+
+      <div id="contacts-list">
+        <div class="loading-overlay"><div class="spinner"></div><span>Loading contacts…</span></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<script src="js/api.js"></script>
+<script src="js/sidebar.js"></script>
+<script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+<script src="js/socket.js"></script>
+<script>
+  Auth.requireAuth();
+  injectSidebar();
+  initSidebar('contacts');
+  loadPendingBadge();
+
+  let allContacts = [];
+
+  async function loadContacts() {
+    const res = await apiFetch('/contacts');
+    if (!res || !res.ok) {
+      document.getElementById('contacts-list').innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><p>Failed to load contacts.</p></div>';
+      return;
+    }
+    allContacts = res.data.contacts;
+    renderContacts(allContacts);
+    document.getElementById('contact-count').textContent = `${allContacts.length} contact${allContacts.length !== 1 ? 's' : ''}`;
+  }
+
+  function renderContacts(contacts) {
+    const el = document.getElementById('contacts-list');
+    if (contacts.length === 0) {
+      el.innerHTML = `<div class="empty-state">
+        <div class="empty-icon">👥</div>
+        <h3>No contacts yet</h3>
+        <p>Send a tracking request by entering a phone number above.</p>
+      </div>`;
+      return;
+    }
+
+    el.innerHTML = `<div class="item-list">
+      ${contacts.map(c => `
+        <div class="item-card fade-in" id="contact-row-${c.contact_id}">
+          <div class="avatar">
+            ${c.profile_image
+              ? `<img src="http://const API_BASE = "https://himself-finder-pace-placed.trycloudflare.com/api";"https://willow-sets-valium-subsequently.trycloudflare.com/api";${c.profile_image}" alt="${c.name}">`
+              : `<span>${c.name.charAt(0).toUpperCase()}</span>`}
+          </div>
+          <div class="item-info">
+            <div class="item-name">${c.name}</div>
+            <div class="item-sub">${c.phone} · Added ${timeAgo(c.created_at)}</div>
+          </div>
+          <div class="item-actions">
+            ${c.is_online ? '<span class="badge badge-online">🟢 Online</span>' : '<span class="text-muted" style="font-size:12px">Offline</span>'}
+            <a href="tracking.html?track=${c.contact_id}" class="btn btn-sm btn-secondary" title="Track">🗺️</a>
+            <button class="btn btn-sm btn-danger" onclick="removeContact(${c.contact_id}, '${c.name}')" title="Remove">🗑️</button>
+          </div>
+        </div>`).join('')}
+    </div>`;
+  }
+
+  async function removeContact(contactId, name) {
+    if (!confirm(`Remove ${name} from your contacts? They will no longer be able to track you.`)) return;
+    const res = await apiFetch(`/contacts/${contactId}`, { method: 'DELETE' });
+    if (res?.ok) {
+      Toast.success('Removed', `${name} removed from contacts.`);
+      allContacts = allContacts.filter(c => c.contact_id !== contactId);
+      renderContacts(allContacts);
+      document.getElementById('contact-count').textContent = `${allContacts.length} contact${allContacts.length !== 1 ? 's' : ''}`;
+    } else {
+      Toast.error('Error', res?.data?.message || 'Could not remove contact.');
+    }
+  }
+
+  // Search
+  document.getElementById('search-contacts').addEventListener('input', (e) => {
+    const q = e.target.value.toLowerCase();
+    renderContacts(allContacts.filter(c =>
+      c.name.toLowerCase().includes(q) || c.phone.toLowerCase().includes(q)
+    ));
+  });
+
+  // Send request
+  document.getElementById('btn-send-request').addEventListener('click', async () => {
+    const phone = document.getElementById('phone-input').value.trim();
+    const feedback = document.getElementById('phone-feedback');
+    feedback.style.color = '';
+    feedback.textContent = '';
+
+    if (!phone) { feedback.style.color = 'var(--red)'; feedback.textContent = 'Enter a phone number.'; return; }
+
+    document.getElementById('send-text').classList.add('hidden');
+    document.getElementById('send-spinner').classList.remove('hidden');
+    document.getElementById('btn-send-request').disabled = true;
+
+    const res = await apiFetch('/contacts/request', {
+      method: 'POST',
+      body: JSON.stringify({ phone }),
+    });
+
+    document.getElementById('send-text').classList.remove('hidden');
+    document.getElementById('send-spinner').classList.add('hidden');
+    document.getElementById('btn-send-request').disabled = false;
+
+    if (res?.ok) {
+      feedback.style.color = 'var(--green)';
+      feedback.textContent = `✅ ${res.data.message}`;
+      document.getElementById('phone-input').value = '';
+      Toast.success('Request sent', res.data.message);
+    } else {
+      feedback.style.color = 'var(--red)';
+      feedback.textContent = `❌ ${res?.data?.message || 'Request failed.'}`;
+    }
+  });
+
+  // Socket — live online status updates
+  const socket = SocketClient.connect();
+  if (socket) {
+    socket.on('request_accepted', () => loadContacts());
+  }
+
+  loadContacts();
+</script>
+</body>
+</html>
