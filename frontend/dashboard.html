@@ -142,35 +142,57 @@
   let sharingActive = false;
 
   async function loadDashboard() {
-    const [contactsRes, incomingRes, outgoingRes] = await Promise.all([
-      apiFetch('/contacts'),
-      apiFetch('/requests/incoming'),
-      apiFetch('/requests/outgoing'),
-    ]);
+  try {
+    const contactsRes = await apiFetch('/contacts');
+    console.log("Contacts:", contactsRes);
 
-    if (contactsRes?.ok) {
-      const contacts = contactsRes.data.contacts;
-      document.getElementById('stat-contacts').textContent = contacts.length;
+    const incomingRes = await apiFetch('/requests/incoming');
+    console.log("Incoming:", incomingRes);
+
+    const outgoingRes = await apiFetch('/requests/outgoing');
+    console.log("Outgoing:", outgoingRes);
+
+    // Contacts
+    if (contactsRes && contactsRes.success) {
+      const contacts = contactsRes.contacts || [];
+
+      document.getElementById("stat-contacts").textContent = contacts.length;
 
       const onlineContacts = contacts.filter(c => c.is_online);
-      document.getElementById('stat-online').textContent = onlineContacts.length;
+      document.getElementById("stat-online").textContent = onlineContacts.length;
 
       renderOnlineContacts(contacts);
     }
 
-    if (incomingRes?.ok) {
-      document.getElementById('stat-incoming').textContent = incomingRes.data.requests.length;
-      const badge = document.getElementById('requests-badge');
-      if (badge && incomingRes.data.requests.length > 0) {
-        badge.textContent = incomingRes.data.requests.length;
-        badge.classList.remove('hidden');
+    // Incoming requests
+    if (incomingRes && incomingRes.success) {
+      const requests = incomingRes.requests || [];
+
+      document.getElementById("stat-incoming").textContent = requests.length;
+
+      const badge = document.getElementById("requests-badge");
+      if (badge) {
+        if (requests.length > 0) {
+          badge.textContent = requests.length;
+          badge.classList.remove("hidden");
+        } else {
+          badge.classList.add("hidden");
+        }
       }
     }
 
-    if (outgoingRes?.ok) {
-      document.getElementById('stat-outgoing').textContent = outgoingRes.data.requests.length;
+    // Outgoing requests
+    if (outgoingRes && outgoingRes.success) {
+      const requests = outgoingRes.requests || [];
+
+      document.getElementById("stat-outgoing").textContent = requests.length;
     }
+
+  } catch (err) {
+    console.error("Dashboard Error:", err);
   }
+}
+
 
   function renderOnlineContacts(contacts) {
     const el = document.getElementById('online-contacts-list');
@@ -187,7 +209,7 @@
           <div class="item-card">
             <div class="avatar">
               ${c.profile_image
-                ? `<img src="${API_BASE.replace('/api','')}${c.profile_image}" alt="${c.name}">>`
+               ? `<img src="${API_BASE.replace('/api','')}${c.profile_image}" alt="${c.name}">`
                 : `<span>${c.name.charAt(0).toUpperCase()}</span>`
               }
             </div>
@@ -280,8 +302,11 @@
       Toast.warning('Request rejected', `${data.by.name} rejected your request.`);
     });
   }
+  window.addEventListener("load", () => {
+    loadDashboard();
+});
 
-  loadDashboard();
+
 </script>
 </body>
 </html>
