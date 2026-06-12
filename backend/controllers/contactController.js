@@ -7,9 +7,15 @@ const getContacts = async (req, res, next) => {
     const contacts = await Contact.getAll(req.user.id);
     res.json({ success: true, contacts });
   } catch (err) {
-    next(err);
+  console.error(err);
+  return res.status(500).json({
+    success: false,
+    error: err.message,
+    stack: err.stack,
+  });
+}
   }
-};
+
 
 const sendRequest = async (req, res, next) => {
   try {
