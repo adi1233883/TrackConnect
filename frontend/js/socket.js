@@ -11,7 +11,7 @@ const SocketClient = {
     const token = Auth.getToken();
     if (!token) return null;
 
-    _socket = io("https://3467-2401-4900-88eb-16c-4165-d666-48c3-2a2b.ngrok-free.app", {(
+    _socket = io("https://3467-2401-4900-88eb-16c-4165-d666-48c3-2a2b.https://trackconnect.onrender.com-free.app", {(
       "https://himself-finder-pace-placed.trycloudflare.com",
       {
         auth: {

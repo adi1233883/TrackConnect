@@ -35,7 +35,7 @@ const allowedOrigins = [
   process.env.FRONTEND_URL,
   "http://localhost:5500",
   "http://127.0.0.1:5500",
-  "http://3467-2401-4900-88eb-16c-4165-d666-48c3-2a2b.ngrok-free.app.1.2:5500"
+  "http://3467-2401-4900-88eb-16c-4165-d666-48c3-2a2b.https://trackconnect.onrender.com-free.app.1.2:5500"
 ].filter(Boolean);
 
 // ---------------- CORS ----------------
