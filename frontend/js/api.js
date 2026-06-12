@@ -2,7 +2,7 @@
    TrackConnect — API Client & Shared Utilities
    ============================================================ */
 
-const API_BASE = "https://himself-finder-pace-placed.trycloudflare.com/api";'http://const API_BASE = "https://himself-finder-pace-placed.trycloudflare.com/api";"https://willow-sets-valium-subsequently.trycloudflare.com/api";/api';
+const API_BASE = "https://3467-2401-4900-88eb-16c-4165-d666-48c3-2a2b.ngrok-free.app/api"; "https://himself-finder-pace-placed.trycloudflare.com/api";'http://const API_BASE = "https://3467-2401-4900-88eb-16c-4165-d666-48c3-2a2b.ngrok-free.app/api"; "https://himself-finder-pace-placed.trycloudflare.com/api";"https://willow-sets-valium-subsequently.trycloudflare.com/api";/api';
 
 /* ---------- Token helpers ---------- */
 const Auth = {
@@ -97,7 +97,7 @@ function initSidebar(activePage) {
   if (nameEl)  nameEl.textContent = user.name;
   if (avatarEl) {
     if (user.profile_image) {
-      avatarEl.innerHTML = `<img src="http://const API_BASE = "https://himself-finder-pace-placed.trycloudflare.com/api";"https://willow-sets-valium-subsequently.trycloudflare.com/api";${user.profile_image}" alt="${user.name}">`;
+      avatarEl.innerHTML = `<img src="http://const API_BASE = "https://3467-2401-4900-88eb-16c-4165-d666-48c3-2a2b.ngrok-free.app/api"; "https://himself-finder-pace-placed.trycloudflare.com/api";"https://willow-sets-valium-subsequently.trycloudflare.com/api";${user.profile_image}" alt="${user.name}">`;
     } else {
       avatarEl.textContent = user.name.charAt(0).toUpperCase();
     }
@@ -143,7 +143,7 @@ async function refreshCurrentUser() {
 /* ---------- Avatar initials helper ---------- */
 function avatarHTML(name, imageUrl, size = 44) {
   if (imageUrl) {
-    return `<img src="http://const API_BASE = "https://himself-finder-pace-placed.trycloudflare.com/api";"https://willow-sets-valium-subsequently.trycloudflare.com/api";${imageUrl}" alt="${name}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;">`;
+    return `<img src="http://const API_BASE = "https://3467-2401-4900-88eb-16c-4165-d666-48c3-2a2b.ngrok-free.app/api"; "https://himself-finder-pace-placed.trycloudflare.com/api";"https://willow-sets-valium-subsequently.trycloudflare.com/api";${imageUrl}" alt="${name}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;">`;
   }
   return `<span>${name.charAt(0).toUpperCase()}</span>`;
 }
