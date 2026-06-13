@@ -89,7 +89,8 @@
     const sendSpinnerEl = document.getElementById('send-spinner');
     const sendRequestBtn = document.getElementById('btn-send-request');
     const searchContactsEl = document.getElementById('search-contacts');
-async function loadContacts() {
+async function loadContacts() {  
+    alert("loadContacts called");
 
   const res = await apiFetch('/contacts');
 
@@ -214,7 +215,7 @@ async function loadContacts() {
         phoneFeedbackEl.textContent = `❌ ${res?.data?.message || 'Request failed.'}`;
       }
     });
-
+       
     // Socket Initialization
     const socket = SocketClient.connect();
     if (socket) {
