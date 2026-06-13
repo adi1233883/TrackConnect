@@ -2,7 +2,7 @@
    TrackConnect — API Client & Shared Utilities
    ============================================================ */
 
-const API_BASE = "https://trackconnect.onrender.com/api";
+const API_BASE = "https://trackconnect-backend.onrender.com/api";
 /* ---------- Token helpers ---------- */
 const Auth = {
   getToken() { return localStorage.getItem('tc_token'); },
@@ -96,7 +96,7 @@ function initSidebar(activePage) {
   if (nameEl)  nameEl.textContent = user.name;
   if (avatarEl) {
     if (user.profile_image) {
-      avatarEl.innerHTML = `<img src="https://trackconnect.onrender.com${user.profile_image}" alt="${user.name}">`;
+      avatarEl.innerHTML = `<img src="https://trackconnect-backend.onrender.com${user.profile_image}" alt="${user.name}">`;
     } else {
       avatarEl.textContent = user.name.charAt(0).toUpperCase();
     }
@@ -142,7 +142,7 @@ async function refreshCurrentUser() {
 /* ---------- Avatar initials helper ---------- */
 function avatarHTML(name, imageUrl, size = 44) {
   if (imageUrl) {
-    return  `<img src="https://trackconnect.onrender.com${imageUrl}" alt="${name}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;">`;
+    return  `<img src="https://trackconnect-backend.onrender.com${imageUrl}" alt="${name}" style="width:${size}px;height:${size}px;border-radius:50%;object-fit:cover;">`;
   }
   return `<span>${name.charAt(0).toUpperCase()}</span>`;
 }

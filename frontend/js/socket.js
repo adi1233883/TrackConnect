@@ -20,7 +20,7 @@ const SocketClient = {
     }
 
     // Connect to Render backend
-    _socket = io("https://trackconnect.onrender.com", {
+  _socket = io("https://trackconnect-backend.onrender.com", {
       auth: {
         token: token,
       },

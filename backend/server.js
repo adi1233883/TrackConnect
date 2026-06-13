@@ -33,11 +33,13 @@ const PORT = process.env.PORT || 5000;
 
 const allowedOrigins = [
   process.env.FRONTEND_URL,
+  "https://trackconnect-59t9.onrender.com",
   "https://rococo-puppy-e2d2c3.netlify.app",
   "http://localhost:5500",
   "http://127.0.0.1:5500",
-
 ].filter(Boolean);
+
+console.log("Allowed Origins:", allowedOrigins);
 
 // ---------------- CORS ----------------
 
