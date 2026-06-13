@@ -43,3 +43,5 @@ router.post("/logout", protect, logout);
 
 module.exports = router;
 
+router.post("/verify-otp", verifyOTP);
+
