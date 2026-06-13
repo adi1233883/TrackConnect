@@ -89,26 +89,26 @@
     const sendSpinnerEl = document.getElementById('send-spinner');
     const sendRequestBtn = document.getElementById('btn-send-request');
     const searchContactsEl = document.getElementById('search-contacts');
+async function loadContacts() {
 
-    async function loadContacts() {
-      const res = await apiFetch('/contacts');
-      if (!res || !res.ok) {
-        contactsListEl.innerHTML = `
-          <div class="empty-state">
-            <div class="empty-icon">⚠️</div>
-            <p>Failed to load contacts.</p>
-          </div>`;
-        return;
-      }
-      allContacts = res.data?.contacts || [];
-      renderContacts(allContacts);
-      updateContactCount(allContacts.length);
-    }
+  const res = await apiFetch('/contacts');
 
-    function updateContactCount(count) {
-      contactCountEl.textContent = `${count} contact${count !== 1 ? 's' : ''}`;
-    }
+  console.log("API RESPONSE =", res);
 
+  if (!res || !res.ok) {
+    document.getElementById("contacts-list").innerHTML =
+      "<h2 style='color:red'>Failed to load contacts</h2>";
+    return;
+  }
+
+  allContacts = res.data.contacts || [];
+
+  document.getElementById("contacts-list").innerHTML =
+    "<pre style='color:white;font-size:14px'>" +
+    JSON.stringify(allContacts, null, 2) +
+    "</pre>";
+
+}
     function renderContacts(contacts) {
       if (contacts.length === 0) {
         contactsListEl.innerHTML = `
