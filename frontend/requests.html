@@ -69,6 +69,8 @@
     if (!res?.ok) { panel.innerHTML = '<p class="text-muted" style="padding:16px">Failed to load.</p>'; return; }
 
     const requests = res.data.requests;
+    console.log("Incoming response:", res);
+    console.log("Requests:", res.data.requests);
     const count = requests.length;
 
     if (count > 0) {
