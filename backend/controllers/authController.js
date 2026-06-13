@@ -1,3 +1,4 @@
+
 const bcrypt = require("bcryptjs");
 const { validationResult } = require("express-validator");
 const otpGenerator = require("otp-generator");
@@ -6,8 +7,10 @@ const User = require("../models/User");
 const { generateToken } = require("../utils/jwt");
 const sendOTP = require("../utils/mailer");
 
-// Temporary OTP storage (use Redis/DB in production)
+// Temporary OTP storage
 const otpStore = {};
+
+// ================= REGISTER =================
 
 const register = async (req, res, next) => {
   try {
@@ -42,30 +45,28 @@ const register = async (req, res, next) => {
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    const userId = await User.create({
+    await User.create({
       name,
       email,
       phone,
       password: hashedPassword,
     });
 
-    const token = generateToken(userId);
-
-    const user = await User.findById(userId);
-
     res.status(201).json({
       success: true,
-      token,
-      user,
       message: "Account created successfully.",
     });
+
   } catch (err) {
     next(err);
   }
 };
 
+// ================= LOGIN =================
+
 const login = async (req, res, next) => {
   try {
+
     const errors = validationResult(req);
 
     if (!errors.isEmpty()) {
@@ -112,28 +113,42 @@ const login = async (req, res, next) => {
     res.json({
       success: true,
       otpSent: true,
-      email: user.email,
-      message: "OTP sent to your email.",
+      message: "OTP sent successfully.",
     });
+
   } catch (err) {
     next(err);
   }
 };
 
+// ================= VERIFY OTP =================
+
 const verifyOTP = async (req, res, next) => {
   try {
-    const { email, otp } = req.body;
 
-    if (otpStore[email] !== otp) {
+    const { identifier, otp } = req.body;
+
+    let user = await User.findByEmail(identifier);
+
+    if (!user) {
+      user = await User.findByPhone(identifier);
+    }
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    if (otpStore[user.email] !== otp) {
       return res.status(400).json({
         success: false,
         message: "Invalid OTP.",
       });
     }
 
-    delete otpStore[email];
-
-    const user = await User.findByEmail(email);
+    delete otpStore[user.email];
 
     await User.setOnline(user.id, true);
 
@@ -147,30 +162,39 @@ const verifyOTP = async (req, res, next) => {
       user: safeUser,
       message: "Login successful.",
     });
+
   } catch (err) {
     next(err);
   }
 };
 
+// ================= GET ME =================
+
 const getMe = async (req, res, next) => {
   try {
+
     res.json({
       success: true,
       user: req.user,
     });
+
   } catch (err) {
     next(err);
   }
 };
 
+// ================= LOGOUT =================
+
 const logout = async (req, res, next) => {
   try {
+
     await User.setOnline(req.user.id, false);
 
     res.json({
       success: true,
       message: "Logged out successfully.",
     });
+
   } catch (err) {
     next(err);
   }
