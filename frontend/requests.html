@@ -71,6 +71,9 @@
     const requests = res.data.requests;
     console.log("Incoming response:", res);
     console.log("Requests:", res.data.requests);
+    panel.innerHTML =
+  "<pre>" + JSON.stringify(res.data, null, 2) + "</pre>";
+    return;
     const count = requests.length;
 
     if (count > 0) {
