@@ -1,252 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TrackConnect — Sign In</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .auth-tabs { display: flex; gap: 0; margin-bottom: 28px; border-radius: var(--radius-sm); overflow: hidden; border: 1px solid var(--border-glass); }
+    .auth-tab  { flex: 1; padding: 10px; background: none; border: none; color: var(--text-secondary); font-size: 14px; font-weight: 600; cursor: pointer; transition: var(--transition); }
+    .auth-tab.active { background: var(--cyan-dim); color: var(--cyan); }
+    .input-icon-wrap { position: relative; }
+    .input-icon-wrap .form-control { padding-left: 42px; }
+    .input-icon-wrap .icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 16px; color: var(--text-muted); pointer-events: none; }
+    .pass-toggle { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 16px; }
+    .error-msg { color: var(--red); font-size: 13px; margin-top: 6px; display: none; }
+    .error-msg.show { display: block; }
+  </style>
+</head>
+<body class="auth-page">
+  <div id="toast-container"></div>
 
-const bcrypt = require("bcryptjs");
-const { validationResult } = require("express-validator");
-const otpGenerator = require("otp-generator");
+  <div class="auth-card fade-in">
+    <div class="auth-logo">
+      <div class="logo-mark">📡</div>
+      <h1>TrackConnect</h1>
+      <p>Real-time location sharing with trusted contacts</p>
+    </div>
 
-const User = require("../models/User");
-const { generateToken } = require("../utils/jwt");
-const sendOTP = require("../utils/mailer");
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="switchTab('login')">Sign In</button>
+      <button class="auth-tab" id="tab-register" onclick="switchTab('register')">Create Account</button>
+    </div>
 
-//Store OTPs temporarily (for production use Redis/database)
-const otpStore = {};
+    <form id="login-form" autocomplete="off">
+      <div class="form-group">
+        <label class="form-label">Email or Phone Number</label>
+        <div class="input-icon-wrap">
+          <span class="icon">👤</span>
+          <input class="form-control" type="text" id="login-identifier" placeholder="you@email.com or +91..." autocomplete="username">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <div class="input-icon-wrap">
+          <span class="icon">🔒</span>
+          <input class="form-control" type="password" id="login-password" placeholder="Your password" autocomplete="current-password">
+          <button type="button" class="pass-toggle" onclick="togglePass('login-password', this)">👁️</button>
+        </div>
+      </div>
+      <p class="error-msg" id="login-error"></p>
+      <button type="submit" class="btn btn-primary w-full" id="btn-login">
+        <span id="btn-login-text">Sign In</span>
+        <span id="btn-login-spinner" class="spinner hidden"></span>
+      </button>
+    </form>
 
-// ================= REGISTER =================
+    <form id="register-form" class="hidden" autocomplete="off">
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <div class="input-icon-wrap">
+          <span class="icon">✏️</span>
+          <input class="form-control" type="text" id="reg-name" placeholder="Jane Doe">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <div class="input-icon-wrap">
+          <span class="icon">📧</span>
+          <input class="form-control" type="email" id="reg-email" placeholder="jane@example.com">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone Number</label>
+        <div class="input-icon-wrap">
+          <span class="icon">📱</span>
+          <input class="form-control" type="tel" id="reg-phone" placeholder="+91 98765 43210">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <div class="input-icon-wrap">
+          <span class="icon">🔒</span>
+          <input class="form-control" type="password" id="reg-password" placeholder="Min 6 characters" autocomplete="new-password">
+          <button type="button" class="pass-toggle" onclick="togglePass('reg-password', this)">👁️</button>
+        </div>
+      </div>
+      <p class="error-msg" id="register-error"></p>
+      <button type="submit" class="btn btn-primary w-full" id="btn-register">
+        <span id="btn-register-text">Create Account</span>
+        <span id="btn-register-spinner" class="spinner hidden"></span>
+      </button>
+    </form>
+  </div>
 
-const register = async (req, res, next) => {
-  try {
+  <script src="js/api.js"></script>
+  <script>
+    // Redirect if already logged in
+    Auth.requireGuest();
 
-    const errors = validationResult(req);
-
-    if (!errors.isEmpty()) {
-      return res.status(400).json({
-        success: false,
-        errors: errors.array(),
-      });
+    function switchTab(tab) {
+      const isLogin = tab === 'login';
+      document.getElementById('tab-login').classList.toggle('active', isLogin);
+      document.getElementById('tab-register').classList.toggle('active', !isLogin);
+      document.getElementById('login-form').classList.toggle('hidden', !isLogin);
+      document.getElementById('register-form').classList.toggle('hidden', isLogin);
+      document.getElementById('login-error').classList.remove('show');
+      document.getElementById('register-error').classList.remove('show');
     }
 
-    const { name, email, phone, password } = req.body;
-
-    const existingEmail = await User.findByEmail(email);
-
-    if (existingEmail) {
-      return res.status(409).json({
-        success: false,
-        message: "Email already registered.",
-      });
+    function togglePass(fieldId, btn) {
+      const field = document.getElementById(fieldId);
+      const isPass = field.type === 'password';
+      field.type = isPass ? 'text' : 'password';
+      btn.textContent = isPass ? '🙈' : '👁️';
     }
 
-    const existingPhone = await User.findByPhone(phone);
-
-    if (existingPhone) {
-      return res.status(409).json({
-        success: false,
-        message: "Phone already registered.",
-      });
+    function setLoading(prefix, loading) {
+      document.getElementById(`btn-${prefix}-text`).classList.toggle('hidden', loading);
+      document.getElementById(`btn-${prefix}-spinner`).classList.toggle('hidden', !loading);
+      document.getElementById(`btn-${prefix}`).disabled = loading;
     }
 
-    const hashedPassword = await bcrypt.hash(password, 12);
+    function showError(formId, msg) {
+      const el = document.getElementById(`${formId}-error`);
+      el.textContent = msg;
+      el.classList.add('show');
+    }
 
-    await User.create({
-      name,
-      email,
-      phone,
-      password: hashedPassword,
+    // LOGIN
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      document.getElementById('login-error').classList.remove('show');
+      const identifier = document.getElementById('login-identifier').value.trim();
+      const password   = document.getElementById('login-password').value;
+
+      if (!identifier || !password) { showError('login', 'Please fill in all fields.'); return; }
+
+      setLoading('login', true);
+      const res = await apiFetch('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ identifier, password }),
+      });
+      setLoading('login', false);
+
+      if (res && res.ok) {
+        Toast.success("OTP Sent", "Check your Email");
+        sessionStorage.setItem("loginIdentifier", identifier);
+        
+        document.getElementById("login-form").innerHTML = `
+          <div class="form-group">
+            <label class="form-label">Enter OTP</label>
+            <input class="form-control" id="otp" placeholder="Enter OTP">
+          </div>
+          <button type="button" class="btn btn-primary w-full" onclick="verifyOTP()">
+            Verify OTP
+          </button>
+        `;
+      } else {
+        showError('login', res?.data?.message || 'Login failed.');
+      }
     });
 
-    res.status(201).json({
-      success: true,
-      message: "Account created successfully.",
-    });
+    // REGISTER
+    document.getElementById('register-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      document.getElementById('register-error').classList.remove('show');
+      const name     = document.getElementById('reg-name').value.trim();
+      const email    = document.getElementById('reg-email').value.trim();
+      const phone    = document.getElementById('reg-phone').value.trim();
+      const password = document.getElementById('reg-password').value;
 
-  } catch (err) {
-    next(err);
-  }
-};
+      if (!name || !email || !phone || !password) { showError('register', 'Please fill in all fields.'); return; }
+      if (password.length < 6) { showError('register', 'Password must be at least 6 characters.'); return; }
 
-// ================= LOGIN =================
-
-const login = async (req, res, next) => {
-
-  try {
-
-    const { identifier, password } = req.body;
-
-    let user = await User.findByEmail(identifier);
-
-    if (!user) {
-      user = await User.findByPhone(identifier);
-    }
-
-    if (!user) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid Credentials",
+      setLoading('register', true);
+      const res = await apiFetch('/auth/register', {
+        method: 'POST',
+        body: JSON.stringify({ name, email, phone, password }),
       });
-    }
+      setLoading('register', false);
 
-    const match = await bcrypt.compare(
-      password,
-      user.password
-    );
-
-    if (!match) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid Credentials",
-      });
-    }
-
-    const otp = otpGenerator.generate(6, {
-      upperCaseAlphabets: false,
-      lowerCaseAlphabets: false,
-      specialChars: false,
+      // Replaced old automatic login behavior with your new block:
+      if (res && res.ok) {
+        Toast.success(
+          "Account Created",
+          "Please login with your email and password."
+        );
+        switchTab("login");
+      } else {
+        const msg =
+          res?.data?.errors?.[0]?.msg ||
+          res?.data?.message ||
+          "Registration failed.";
+        showError("register", msg);
+      }
     });
 
-    otpStore[identifier] = {
-      otp,
-      userId: user.id,
-      expire: Date.now() + 300000,
-    };
+    // OTP Verification Handler
+    async function verifyOTP() {
+      const otp = document.getElementById("otp").value.trim();
+      const identifier = sessionStorage.getItem("loginIdentifier");
 
-    await sendOTP(user.email, otp);
+      if (!otp) {
+        alert("Please enter OTP");
+        return;
+      }
 
-    res.json({
-      success: true,
-      message: "OTP sent successfully",
-    });
-
-  } catch (err) {
-    next(err);
-  }
-
-};
-
-// ================= VERIFY OTP =================
-
-const verifyOTP = async (req, res, next) => {
-
-  try {
-
-    const { identifier, otp } = req.body;
-
-    const data = otpStore[identifier];
-
-    if (!data) {
-
-      return res.status(400).json({
-        success: false,
-        message: "OTP expired",
+      const res = await apiFetch("/auth/verify-otp", {
+        method: "POST",
+        body: JSON.stringify({
+          identifier,
+          otp
+        })
       });
 
+      if (res && res.ok) {
+        Auth.setToken(res.data.token);
+        Auth.setUser(res.data.user);
+        Toast.success("Login Successful", "Welcome back!");
+        window.location.href = "dashboard.html";
+      } else {
+        alert(res?.data?.message || "Invalid OTP");
+      }
     }
-
-    if (Date.now() > data.expire) {
-
-      delete otpStore[identifier];
-
-      return res.status(400).json({
-        success: false,
-        message: "OTP expired",
-      });
-
-    }
-
-    if (data.otp !== otp) {
-
-      return res.status(400).json({
-        success: false,
-        message: "Invalid OTP",
-      });
-
-    }
-
-    const user = await User.findById(data.userId);
-
-    await User.setOnline(user.id, true);
-
-    const token = generateToken(user.id);
-
-    delete otpStore[identifier];
-
-    const { password, ...safeUser } = user;
-
-    res.json({
-
-      success: true,
-
-      token,
-
-      user: safeUser,
-
-      message: "Login successful",
-
-    });
-
-  } catch (err) {
-
-    next(err);
-
-  }
-
-};
-
-// ================= GET ME =================
-
-const getMe = async (req, res, next) => {
-
-  try {
-
-    res.json({
-
-      success: true,
-
-      user: req.user,
-
-    });
-
-  } catch (err) {
-
-    next(err);
-
-  }
-
-};
-
-// ================= LOGOUT =================
-
-const logout = async (req, res, next) => {
-
-  try {
-
-    await User.setOnline(req.user.id, false);
-
-    res.json({
-
-      success: true,
-
-      message: "Logged out successfully",
-
-    });
-
-  } catch (err) {
-
-    next(err);
-
-  }
-
-};
-
-module.exports = {
-
-  register,
-
-  login,
-
-  verifyOTP,
-
-  getMe,
-
-  logout,
-
-};
-
+  </script>
+</body>
+</html>
